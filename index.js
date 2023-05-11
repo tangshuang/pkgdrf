@@ -31,26 +31,33 @@ program
     })
 
 program
-    .command('import <pkg>')
+    .command('import <pkgs...>')
     .description('import a package from depository')
-    .action((pkg) => {
-        let filename = pkg.replace(/\W/g, '-')
-        if (filename[0] === '-') {
-            filename = filename.substring(1)
-        }
-
+    .action((pkgs) => {
         const srcdir = `${homeDir}/.npm/drafts`
         const files = fs.readdirSync(srcdir)
-        const items = files.filter(item => item.indexOf(filename) === 0)
-        if (!items) {
-            console.log('没有找到对应包', { pkg, filename })
-            shell.exit()
-        }
+        const tarbolls = []
 
-        items.sort()
-        const file = items[0]
-        const filepath = path.join(srcdir, file)
-        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock "${filepath}"`)
+        pkgs.forEach((pkg) => {
+            let filename = pkg.replace(/\W/g, '-')
+            if (filename[0] === '-') {
+                filename = filename.substring(1)
+            }
+
+            const items = files.filter(item => item.indexOf(filename) === 0)
+            if (!items) {
+                console.log('没有找到对应包', { pkg, filename })
+                shell.exit()
+                return
+            }
+
+            items.sort()
+            const file = items[0]
+            const filepath = path.join(srcdir, file)
+            tarbolls.push(filepath)
+        })
+
+        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
     })
 
 program
