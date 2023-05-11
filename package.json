@@ -1,0 +1,16 @@
+{
+  "name": "pkgdrf",
+  "version": "0.0.2",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "pkgdrf": "index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^10.0.1",
+    "shelljs": "^0.8.5"
+  }
+}
