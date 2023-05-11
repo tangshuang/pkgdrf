@@ -67,6 +67,8 @@ program
                 }
             })
         })
+
+        console.log('已安装：', tarbolls)
     })
 
 program
