@@ -58,6 +58,15 @@ program
         })
 
         shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
+
+        // 移除可能的循环依赖，注意，这里仅仅是为了调试，正常安装时会补充回来
+        pkgs.forEach((pkg) => {
+            pkgs.forEach((p) => {
+                if (fs.existsSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`))) {
+                    fs.rmSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`), { recursive: true, force: true })
+                }
+            })
+        })
     })
 
 program
