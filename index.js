@@ -50,7 +50,7 @@ program
         items.sort()
         const file = items[0]
         const filepath = path.join(srcdir, file)
-        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save "${filepath}"`)
+        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock "${filepath}"`)
     })
 
 program
