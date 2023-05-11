@@ -52,7 +52,7 @@ program
             }
 
             items.sort()
-            const file = items[0]
+            const file = items[items.length - 1]
             const filepath = path.join(srcdir, file)
             tarbolls.push(filepath)
         })
