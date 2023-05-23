@@ -22,12 +22,18 @@ program
 
 program
     .command('export')
+    .option('-w, --watch', '是否开启观察模式，开启后每3秒自动导出一次')
     .description('export current package as a standby into depository')
-    .action(() => {
+    .action((options) => {
         // const pkgInfo = fs.readFileSync(path.join(currentDir, 'package.json'))
         // const pkgJson = JSON.stringify(pkgInfo)
         shell.exec(`mkdir -p ${homeDir}/.npm/drafts`)
-        shell.exec(`cd "${cwd}" && npm pack --pack-destination="${homeDir}/.npm/drafts"`)
+        const build = () => shell.exec(`cd "${cwd}" && npm pack --pack-destination="${homeDir}/.npm/drafts"`)
+        build()
+
+        if (options.watch) {
+            setInterval(build, 3000)
+        }
     })
 
 program
