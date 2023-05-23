@@ -22,7 +22,7 @@ program
 
 program
     .command('export')
-    .option('-w, --watch', '是否开启观察模式，开启后每3秒自动导出一次')
+    .option('-w, --watch', '开启观察模式，开启后每3秒自动导出一次')
     .description('export current package as a standby into depository')
     .action((options) => {
         // const pkgInfo = fs.readFileSync(path.join(currentDir, 'package.json'))
@@ -38,8 +38,9 @@ program
 
 program
     .command('import <pkgs...>')
+    .option('-w, --watch', '开启观察模式，开启后自动安装最新代码')
     .description('import a package from depository')
-    .action((pkgs) => {
+    .action((pkgs, options) => {
         const srcdir = `${homeDir}/.npm/drafts`
         const files = fs.readdirSync(srcdir)
         const tarbolls = []
@@ -63,18 +64,47 @@ program
             tarbolls.push(filepath)
         })
 
-        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
+        const install = (tarbolls) => {
+            shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
 
-        // 移除可能的循环依赖，注意，这里仅仅是为了调试，正常安装时会补充回来
-        pkgs.forEach((pkg) => {
-            pkgs.forEach((p) => {
-                if (fs.existsSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`))) {
-                    fs.rmSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`), { recursive: true, force: true })
-                }
+            // 移除可能的循环依赖，注意，这里仅仅是为了调试，正常安装时会补充回来
+            pkgs.forEach((pkg) => {
+                pkgs.forEach((p) => {
+                    if (fs.existsSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`))) {
+                        fs.rmSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`), { recursive: true, force: true })
+                    }
+                })
             })
-        })
 
-        console.log('已安装：', tarbolls)
+            console.log('已安装：', tarbolls)
+        }
+
+        install(tarbolls)
+
+        if (options.watch) {
+            const queue = new Set()
+            const setupWatch = (file) => {
+                fs.watchFile(file, { ninterval: 1000 }, (curr, prev) => {
+                    if (curr.size !== prev.size) {
+                        queue.add(file)
+                    }
+                })
+            }
+            tarbolls.forEach(setupWatch)
+            let installing = false
+            setInterval(() => {
+                if (installing) {
+                    return
+                }
+                if (!queue.size) {
+                    return
+                }
+                installing = true
+                install(Array.from(queue))
+                queue.clear()
+                installing = false
+            }, 1000)
+        }
     })
 
 program
