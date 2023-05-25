@@ -82,8 +82,10 @@ program
         const install = (pkginfo) => {
             // shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
             const { name, file } = pkginfo
+            const target = path.resolve(cwd, 'node_modules', name)
+            pkginfo.target = target
             tar.x({
-                cwd: path.resolve(cwd, 'node_modules', name),
+                cwd: target,
                 file,
                 sync: true,
             })
