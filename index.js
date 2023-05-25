@@ -5,6 +5,7 @@ const { Command } = require('commander')
 const shell = require('shelljs')
 const fs = require('fs')
 const os = require("os")
+const tar = require('tar')
 
 const cwd = process.cwd()
 // const currentDir = path.basename(cwd)
@@ -43,7 +44,8 @@ program
     .action((pkgs, options) => {
         const srcdir = `${homeDir}/.npm/drafts`
         const files = fs.readdirSync(srcdir)
-        const tarbolls = []
+
+        const pkginfos = []
 
         pkgs.forEach((pkg) => {
             let filename = pkg.replace(/\W/g, '-')
@@ -61,25 +63,35 @@ program
             items.sort()
             const file = items[items.length - 1]
             const filepath = path.join(srcdir, file)
-            tarbolls.push(filepath)
+
+            pkginfos.push({
+                name: pkg,
+                file: filepath,
+            })
         })
 
-        const install = (tarbolls) => {
-            shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
-
-            // 移除可能的循环依赖，注意，这里仅仅是为了调试，正常安装时会补充回来
-            pkgs.forEach((pkg) => {
-                pkgs.forEach((p) => {
-                    if (fs.existsSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`))) {
-                        fs.rmSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`), { recursive: true, force: true })
-                    }
-                })
+        // 移除可能的循环依赖，注意，这里仅仅是为了调试，正常安装时会补充回来
+        pkgs.forEach((pkg) => {
+            pkgs.forEach((p) => {
+                if (fs.existsSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`))) {
+                    fs.rmSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`), { recursive: true, force: true })
+                }
             })
+        })
 
-            console.log('已安装：', tarbolls)
+        const install = (pkginfo) => {
+            // shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
+            const { name, file } = pkginfo
+            tar.x({
+                cwd: path.resolve(cwd, 'node_modules', name),
+                file,
+                sync: true,
+            })
         }
 
-        install(tarbolls)
+        pkginfos.forEach(install)
+
+        console.log('已安装：', pkginfos)
 
         if (options.watch) {
             const queue = new Set()
@@ -90,7 +102,13 @@ program
                     }
                 })
             }
-            tarbolls.forEach(setupWatch)
+            pkginfos.map(item => item.file)
+                .forEach(setupWatch)
+
+            const pkginfomapping = pkginfos.reduce((mapping, item) => {
+                mapping[item.file] = item
+                return mapping
+            }, {})
             let installing = false
             setInterval(() => {
                 if (installing) {
@@ -100,7 +118,9 @@ program
                     return
                 }
                 installing = true
-                install(Array.from(queue))
+                Array.from(queue)
+                    .map(file => pkginfomapping[file])
+                    .forEach(install)
                 queue.clear()
                 installing = false
             }, 1000)
