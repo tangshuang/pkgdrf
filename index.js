@@ -88,6 +88,7 @@ program
                 cwd: target,
                 file,
                 sync: true,
+                strip: 1,
             })
         }
 
