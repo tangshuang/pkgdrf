@@ -94,7 +94,7 @@ program
 
         pkginfos.forEach(install)
 
-        console.log('已安装：', pkginfos)
+        console.log(`[${new Date().toLocaleString()}]`, '已安装：', pkginfos)
 
         if (options.watch) {
             const queue = new Set()
@@ -121,9 +121,9 @@ program
                     return
                 }
                 installing = true
-                Array.from(queue)
-                    .map(file => pkginfomapping[file])
-                    .forEach(install)
+                const nextPkginfos = Array.from(queue).map(file => pkginfomapping[file]).filter(Boolean)
+                nextPkginfos.forEach(install)
+                console.log(`[${new Date().toLocaleString()}]`, '已安装：', nextPkginfos)
                 queue.clear()
                 installing = false
             }, 1000)
