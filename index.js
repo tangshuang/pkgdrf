@@ -24,7 +24,7 @@ program
 program
     .command('export')
     .option('-w, --watch', '开启观察模式，开启后每3秒自动导出一次')
-    .description('export current package as a standby into depository')
+    .description('将当前包导出到草稿库中')
     .action((options) => {
         // const pkgInfo = fs.readFileSync(path.join(currentDir, 'package.json'))
         // const pkgJson = JSON.stringify(pkgInfo)
@@ -40,7 +40,7 @@ program
 program
     .command('import <pkgs...>')
     .option('-w, --watch', '开启观察模式，开启后自动安装最新代码')
-    .description('import a package from depository')
+    .description('从草稿库中解压覆盖一个包')
     .action((pkgs, options) => {
         const srcdir = `${homeDir}/.npm/drafts`
         const files = fs.readdirSync(srcdir)
@@ -70,17 +70,7 @@ program
             })
         })
 
-        // 移除可能的循环依赖，注意，这里仅仅是为了调试，正常安装时会补充回来
-        pkgs.forEach((pkg) => {
-            pkgs.forEach((p) => {
-                if (fs.existsSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`))) {
-                    fs.rmSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`), { recursive: true, force: true })
-                }
-            })
-        })
-
         const install = (pkginfo) => {
-            // shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${tarbolls.map(item => `"${item}"`).join(' ')}`)
             const { name, file } = pkginfo
             const target = path.resolve(cwd, 'node_modules', name)
             pkginfo.target = target
@@ -128,6 +118,55 @@ program
                 installing = false
             }, 1000)
         }
+    })
+
+program
+    .command('install <pkgs...>')
+    .option('-c, --cleanup', '是否清除该包自身依赖中与当前项目重名的包，即从该包的node_modules中移除某些包，注意，该操作仅做调试用')
+    .description('从草稿库中安装一个包，它所依赖的其他包也会被一并安装')
+    .action((pkgs, options) => {
+        const srcdir = `${homeDir}/.npm/drafts`
+        const files = fs.readdirSync(srcdir)
+
+        const pkginfos = []
+
+        pkgs.forEach((pkg) => {
+            let filename = pkg.replace(/\W/g, '-')
+            if (filename[0] === '-') {
+                filename = filename.substring(1)
+            }
+
+            const items = files.filter(item => item.indexOf(filename) === 0)
+            if (!items) {
+                console.log('没有找到对应包', { pkg, filename })
+                shell.exit()
+                return
+            }
+
+            items.sort()
+            const file = items[items.length - 1]
+            const filepath = path.join(srcdir, file)
+
+            pkginfos.push({
+                name: pkg,
+                file: filepath,
+            })
+        })
+
+        // 移除可能的循环依赖，注意，这里仅仅是为了调试，正常安装时会补充回来
+        if (options.cleanup) {
+            pkgs.forEach((pkg) => {
+                pkgs.forEach((p) => {
+                    if (fs.existsSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`))) {
+                        fs.rmSync(path.resolve(cwd, `node_modules/${pkg}/node_modules/${p}`), { recursive: true, force: true })
+                    }
+                })
+            })
+        }
+
+        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${pkginfos.map(item => `"${item.name}"`).join(' ')}`)
+
+        console.log(`[${new Date().toLocaleString()}]`, '已安装：', pkginfos)
     })
 
 program
