@@ -164,7 +164,7 @@ program
             })
         }
 
-        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${pkginfos.map(item => `"${item.name}"`).join(' ')}`)
+        shell.exec(`cd "${cwd}" && npm install --legacy-peer-deps --no-save --no-package-lock ${pkginfos.map(item => `"${item.file}"`).join(' ')}`)
 
         console.log(`[${new Date().toLocaleString()}]`, '已安装：', pkginfos)
     })
