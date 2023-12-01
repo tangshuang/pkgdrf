@@ -40,6 +40,7 @@ program
 program
     .command('import <pkgs...>')
     .option('-w, --watch', '开启观察模式，开启后自动安装最新代码')
+    .option('-r, --watch-run', '开启观察模式的同时，运行命令，代码变更后重启命令')
     .description('从草稿库中解压覆盖一个包')
     .action((pkgs, options) => {
         const srcdir = `${homeDir}/.npm/drafts`
@@ -86,7 +87,7 @@ program
 
         console.log(`[${new Date().toLocaleString()}]`, '已安装：', pkginfos)
 
-        if (options.watch) {
+        if (options.watch || options.watchRun) {
             const queue = new Set()
             const setupWatch = (file) => {
                 fs.watchFile(file, { ninterval: 1000 }, (curr, prev) => {
@@ -102,6 +103,9 @@ program
                 mapping[item.file] = item
                 return mapping
             }, {})
+
+            let child = shell.exec(options.watchRun, { async: true })
+
             let installing = false
             setInterval(() => {
                 if (installing) {
@@ -115,6 +119,10 @@ program
                 nextPkginfos.forEach(install)
                 console.log(`[${new Date().toLocaleString()}]`, '已安装：', nextPkginfos)
                 queue.clear()
+
+                child.kill()
+                child = shell.exec(options.watchRun, { async: true })
+
                 installing = false
             }, 1000)
         }
