@@ -104,8 +104,9 @@ program
                 return mapping
             }, {})
 
+            let child
             if (options.watchRun) {
-                shell.exec(options.watchRun, { async: true })
+                child = shell.exec(options.watchRun, { async: true })
             }
 
             let installing = false
@@ -123,9 +124,9 @@ program
                 queue.clear()
 
                 if (options.watchRun) {
-                    shell.exit(0)
+                    child.kill('SIGKILL')
                     setTimeout(() => {
-                        shell.exec(options.watchRun, { async: true })
+                        child = shell.exec(options.watchRun, { async: true })
                     }, 200)
                 }
 
