@@ -121,8 +121,13 @@ program
                 queue.clear()
 
                 if (options.watchRun) {
-                    child.kill()
-                    child = shell.exec(options.watchRun, { async: true })
+                    const res = child.kill('sigint')
+                    if (res) {
+                        console.log('-- killed --')
+                    }
+                    setTimeout(() => {
+                        child = shell.exec(options.watchRun, { async: true })
+                    }, 500)
                 }
 
                 installing = false
