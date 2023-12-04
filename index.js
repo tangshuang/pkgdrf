@@ -104,7 +104,9 @@ program
                 return mapping
             }, {})
 
-            let child = options.watchRun && shell.exec(options.watchRun, { async: true })
+            if (options.watchRun) {
+                shell.exec(options.watchRun, { async: true })
+            }
 
             let installing = false
             setInterval(() => {
@@ -121,13 +123,10 @@ program
                 queue.clear()
 
                 if (options.watchRun) {
-                    const res = child.kill('sigint')
-                    if (res) {
-                        console.log('-- killed --')
-                    }
+                    shell.exit(0)
                     setTimeout(() => {
-                        child = shell.exec(options.watchRun, { async: true })
-                    }, 500)
+                        shell.exec(options.watchRun, { async: true })
+                    }, 200)
                 }
 
                 installing = false
