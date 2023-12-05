@@ -6,6 +6,7 @@ const shell = require('shelljs')
 const fs = require('fs')
 const os = require("os")
 const tar = require('tar')
+const psTree = require('ps-tree')
 
 const cwd = process.cwd()
 // const currentDir = path.basename(cwd)
@@ -105,8 +106,11 @@ program
             }, {})
 
             let child
-            if (options.watchRun) {
+            const run = () => {
                 child = shell.exec(options.watchRun, { async: true })
+            }
+            if (options.watchRun) {
+                run()
             }
 
             let installing = false
@@ -124,10 +128,15 @@ program
                 queue.clear()
 
                 if (options.watchRun) {
-                    child.kill('SIGKILL')
-                    setTimeout(() => {
-                        child = shell.exec(options.watchRun, { async: true })
-                    }, 200)
+                    psTree(child.pid, (err, children) => {
+                        if (err) {
+                            return
+                        }
+                        shell.exec(`kill - 9 ${children.map(child => child.PID)}`)
+                        shell.exec(`kill -9 ${child.pid}`)
+                        console.log('killed!!!!!!!!')
+                        // setTimeout(run, 1000)
+                    })
                 }
 
                 installing = false

@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "commander": "^10.0.1",
+    "ps-tree": "^1.2.0",
     "shelljs": "^0.8.5",
     "tar": "^6.1.15"
   },
