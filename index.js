@@ -34,7 +34,7 @@ program
         build()
 
         if (options.watch) {
-            setInterval(build, 3000)
+            setInterval(build, 1000)
         }
     })
 
@@ -88,60 +88,70 @@ program
 
         console.log(`[${new Date().toLocaleString()}]`, '已安装：', pkginfos)
 
-        if (options.watch || options.watchRun) {
-            const queue = new Set()
-            const setupWatch = (file) => {
-                fs.watchFile(file, { ninterval: 1000 }, (curr, prev) => {
-                    if (curr.size !== prev.size) {
-                        queue.add(file)
-                    }
-                })
-            }
-            pkginfos.map(item => item.file)
-                .forEach(setupWatch)
-
-            const pkginfomapping = pkginfos.reduce((mapping, item) => {
-                mapping[item.file] = item
-                return mapping
-            }, {})
-
-            let child
-            const run = () => {
-                child = shell.exec(options.watchRun, { async: true })
-            }
-            if (options.watchRun) {
-                run()
-            }
-
-            let installing = false
-            setInterval(() => {
-                if (installing) {
-                    return
-                }
-                if (!queue.size) {
-                    return
-                }
-                installing = true
-                const nextPkginfos = Array.from(queue).map(file => pkginfomapping[file]).filter(Boolean)
-                nextPkginfos.forEach(install)
-                console.log(`[${new Date().toLocaleString()}]`, '已安装：', nextPkginfos)
-                queue.clear()
-
-                if (options.watchRun) {
-                    psTree(child.pid, (err, children) => {
-                        if (err) {
-                            return
-                        }
-                        shell.exec(`kill - 9 ${children.map(child => child.PID)}`)
-                        shell.exec(`kill -9 ${child.pid}`)
-                        console.log('killed!!!!!!!!')
-                        // setTimeout(run, 1000)
-                    })
-                }
-
-                installing = false
-            }, 1000)
+        // without watch options
+        if (!options.watch && !options.watchRun) {
+            return
         }
+
+        const queue = new Set()
+        const setupWatch = (file) => {
+            fs.watchFile(file, { ninterval: 1000 }, (curr, prev) => {
+                if (curr.size !== prev.size) {
+                    queue.add(file)
+                }
+            })
+        }
+        pkginfos.map(item => item.file)
+            .forEach(setupWatch)
+
+        const pkginfomapping = pkginfos.reduce((mapping, item) => {
+            mapping[item.file] = item
+            return mapping
+        }, {})
+
+        let child
+        const run = () => {
+            child = shell.exec(options.watchRun, { async: true })
+        }
+        if (options.watchRun) {
+            run()
+        }
+
+        let installing = false
+        setInterval(() => {
+            if (installing) {
+                return
+            }
+            if (!queue.size) {
+                return
+            }
+            installing = true
+            const nextPkginfos = Array.from(queue).map(file => pkginfomapping[file]).filter(Boolean)
+            nextPkginfos.forEach(install)
+            console.log(`[${new Date().toLocaleString()}]`, '已安装：', nextPkginfos)
+            queue.clear()
+            installing = false
+
+            // without watch-run
+            if (!options.watchRun) {
+                return
+            }
+
+            psTree(child.pid, (err, children) => {
+                if (err) {
+                    return
+                }
+                const pids = [child.pid]
+                children.forEach((child) => {
+                    pids.push(child.PID)
+                })
+                pids.forEach((pid) => {
+                    shell.exec(`kill -9 ${pid}`)
+                })
+                console.log('killed:', pids)
+                setTimeout(run, 1000)
+            })
+        }, 1000)
     })
 
 program
